@@ -3,7 +3,7 @@
 FROM alpine
 MAINTAINER Ishi Ruy <dev@nhz.io>
 
-RUN apk add -U docker iproute2 && curl git.io/weave > /usr/bin/weave && chmod a+x /usr/bin/weave
+RUN apk add -U docker iproute2 && curl -L git.io/weave > /usr/bin/weave && chmod a+x /usr/bin/weave
 
 ENV IF eth+
 ENV TCP_PORTS 22,80,443,6783
