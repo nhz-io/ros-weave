@@ -8,7 +8,7 @@ RUN apk add -U docker iproute2 && curl -L git.io/weave > /usr/bin/weave && chmod
 ENV IF eth+
 ENV TCP_PORTS 22,80,443,6783
 ENV UDP_PORTS 6783,6784
-ENV HEAD_NODE 127.0.0.1
+ENV HEAD_NODE localhost
 ENV PEER_COUNT 3
 ENV DOCKER_HOST unix:///var/run/user-docker.sock
 
