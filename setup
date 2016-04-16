@@ -23,14 +23,14 @@ weave:
   tty: true
   labels:
     io.rancher.os.scope: system
-    io.rancher.os.after: docker,console,all-volumes
+    io.rancher.os.after: docker,console
   environment:
     TCP_PORTS: $TCP_PORTS
     UDP_PORTS: $UDP_PORTS
     HEAD_NODE: $HEAD_NODE
     DOCKER_HOST: $DOCKER_HOST
   volumes_from:
-    - all-volumes
+    - /var/run:/var/run
 WEAVESERVICE
 
 ros s enable $WEAVE_SERVICE
