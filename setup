@@ -2,15 +2,15 @@
 
 HEAD_NODE=$1
 DOCKER_HOST=unix:///var/run/user-docker.sock
-WEAVE_CONFIG=/var/lib/rancher/conf/cloud-config.d/weave.yml
-WEAVE_SERVICE=/var/lib/rancher/conf/weave-service.yml
+WEAVE_CONFIG=/var/lib/rancher/conf/cloud-config.d/weave_config.yml
+WEAVE_SERVICE=/var/lib/rancher/conf/weave.yml
 
 DOCKER_ARGS="[$(sudo ros config get rancher.docker.args | grep -v unix:/// | sed -e 's/^- //g' | sed -e 's/.$/&, /' | xargs echo -n)$DOCKER_HOST]"
 sudo ros config set rancher.docker.args "$DOCKER_ARGS"
 
 sudo system-docker rm weave
 sudo ros s delete $WEAVE_SERVICE
-sudo cat > /var/lib/rancher/conf/weave.yml <<WEAVE
+sudo cat > $WEAVE_SERVICE <<WEAVESERVICE
 weave:
   image: nhzio/ros-weave:latest
   container_name: weave
@@ -26,13 +26,14 @@ weave:
     DOCKER_HOST: unix:///var/run/user-docker.sock
   volumes:
     - /var/run:/var/run
-WEAVE
+WEAVESERVICE
+
 sudo ros s enable $WEAVE_SERVICE
 sudo ros s pull weave
 sudo system-docker pull nhzio/ros-weave:latest
 sudo ros s create
 
-sudo cat > /var/lib/rancher/conf/cloud-config.d/weave_config.yml <<WEAVECONF
+sudo cat > $WEAVE_CONFIG <<WEAVECONFIG
 write_files:
 - path: /opt/rancher/bin/start.sh
   owner: root
@@ -47,6 +48,6 @@ write_files:
   content: |
     #!/bin/bash
     docker -H unix:///var/run/user-docker.sock run --rm -i -t -v /var/run/user-docker.sock:/var/run/user-docker.sock nhzio/ros-weave:latest weave "$@"
-WEAVECONF
+WEAVECONFIG
 
 sudo ros config set rancher.services.weave.environment.HEAD_NODE "$HEAD_NODE"
