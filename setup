@@ -29,7 +29,7 @@ weave:
     UDP_PORTS: $UDP_PORTS
     HEAD_NODE: $HEAD_NODE
     DOCKER_HOST: $DOCKER_HOST
-  volumes_from:
+  volumes:
     - /var/run:/var/run
 WEAVESERVICE
 
