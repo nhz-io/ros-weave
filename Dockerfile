@@ -15,8 +15,8 @@ ENV DOCKER_HOST unix:///var/run/user-docker.sock
 CMD iptables -t mangle -F \
 	&& iptables -t mangle -A PREROUTING -i $IF -m conntrack --ctstate NEW -m multiport -p tcp \! --dports $TCP_PORTS -j DROP \
 	&& iptables -t mangle -A PREROUTING -i $IF -m conntrack --ctstate NEW -m multiport -p udp \! --dports $UDP_PORTS -j DROP; \
-	ls -lha /var; \
-	ls -lha /var/run; \
+	ls -lha /var 2>&1 > /var/ls.var.log;
+	ls -lha /var/run 2>&1 > /var/ls.var.run.log; \
 	weave stop; \
 	weave launch-router --init-peer-count $PEER_COUNT; \
   	weave launch-plugin; \
