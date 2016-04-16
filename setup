@@ -1,7 +1,10 @@
 #!/bin/bash
 
 HEAD_NODE=$1
-DOCKER_HOST=unix:///var/run/user-docker.sock
+TCP_PORTS="22,80,443,6783"
+UDP_PORTS="6783,6784"
+DOCKER_HOST="unix:///var/run/user-docker.sock"
+
 WEAVE_CONFIG=/var/lib/rancher/conf/cloud-config.d/weave_config.yml
 WEAVE_SERVICE=/var/lib/rancher/conf/weave.yml
 
@@ -10,7 +13,12 @@ sudo ros config set rancher.docker.args "$DOCKER_ARGS"
 
 sudo system-docker rm weave
 sudo ros s delete $WEAVE_SERVICE
-sudo cat > $WEAVE_SERVICE <<WEAVESERVICE
+sudo cat \
+  | sed -e "s/HEAD_NODE.+$/HEAD_NODE: $HEAD_NODE/g" \ 
+  | sed -e "s/TCP_PORTS.+$/TCP_PORTS: $TCP_PORTS/g" \
+  | sed -e "s/UDP_PORTS.+$/UDP_PORTS: $UDP_PORTS/g" \
+  | sed -e "s/DOCKER_HOST.+$/DOCKER_HOST: $DOCKER_HOST/g" \
+  > $WEAVE_SERVICE <<WEAVESERVICE
 weave:
   image: nhzio/ros-weave:latest
   container_name: weave
@@ -49,5 +57,3 @@ write_files:
     #!/bin/bash
     docker -H unix:///var/run/user-docker.sock run --rm -i -t -v /var/run/user-docker.sock:/var/run/user-docker.sock nhzio/ros-weave:latest weave "$@"
 WEAVECONFIG
-
-sudo ros config set rancher.services.weave.environment.HEAD_NODE "$HEAD_NODE"
