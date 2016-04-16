@@ -20,6 +20,6 @@ CMD iptables -t mangle -F \
 	weave stop; \
 	weave launch-router --init-peer-count $PEER_COUNT; \
   	weave launch-plugin; \
-  	weave launch-proxy -H $DOCKER_HOST; \
+  	weave launch-proxy -H unix:///var/run/docker.sock; \
   	weave connect $HEAD_NODE
 
