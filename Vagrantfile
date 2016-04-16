@@ -32,7 +32,7 @@ Vagrant.configure(2) do |config|
         node.vm.hostname = hostname
 
         #config.vm.provision "shell", inline: "docker run -v /var/run/docker.sock:/var/run/docker.sock --net=host nhzio/weave"
-				config.vm.provision "shell", inline: "wget https://raw.githubusercontent.com/nhz-io/ros-weave/master/setup; chmod +x setup; sudo ./setup 172.19.8.101; rm setup;" 
+				config.vm.provision "shell", inline: "wget --no-cache https://raw.githubusercontent.com/nhz-io/ros-weave/master/setup; chmod +x setup; sudo ./setup 172.19.8.101; rm setup;" 
 
         # Disabling compression because OS X has an ancient version of rsync installed.
         # Add -z or remove rsync__args below if you have a newer version of rsync on your machine.
