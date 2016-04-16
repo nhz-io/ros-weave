@@ -19,6 +19,8 @@ weave:
   container_name: weave
   privileged: true
   net: host
+  stdin_open: true
+  tty: true
   labels:
     io.rancher.os.scope: system
     io.rancher.os.after: docker,console,all-volumes
@@ -50,5 +52,5 @@ write_files:
   permissions: "0755"
   content: |
     #!/bin/bash
-    docker -H unix:///var/run/user-docker.sock run --rm -i -t -v /var/run/user-docker.sock:/var/run/user-docker.sock nhzio/ros-weave:latest weave "$@"
+    docker -H unix:///var/run/user-docker.sock run --rm -i -t -v /var/run:/var/run nhzio/ros-weave:latest weave "$@"
 WEAVECONFIG
