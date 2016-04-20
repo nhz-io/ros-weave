@@ -1,22 +1,31 @@
-#!/bin/bash
+#!/bin/sh
 
-HEAD_NODE=$1
-TCP_PORTS="22,80,443,6783"
-UDP_PORTS="6783,6784"
-DOCKER_HOST="unix:///var/run/user-docker.sock"
+USER_DOCKER=/var/run/user-docker.sock
+SYSTEM_DOCKER=/var/run/system-docker.sock
+SWARM_DOCKER=/var/run/swarm-docker.sock
+WEAVE_DOCKER=/var/run/weave-docker.sock
+
+WEAVEROUTER_NICKNAME=$(head -c 256 /dev/urandom | md5sum | head -c 32)
+WEAVEROUTER_HEAD_NODE=localhost
+WEAVEROUTER_PASSWORD=$(head -c 256 /dev/urandom | md5sum | head -c 32)
+
+WEAVEPROXY_HOST=0.0.0.0
+WEAVEPROXY_PORT=12375
 
 WEAVE_CONFIG=/var/lib/rancher/conf/cloud-config.d/weave_config.yml
 WEAVE_SERVICE=/var/lib/rancher/conf/weave.yml
 
-DOCKER_ARGS="[$(sudo ros config get rancher.docker.args | grep -v unix:/// | sed -e 's/^- //g' | sed -e 's/.$/&, /' | xargs echo -n)$DOCKER_HOST]"
-ros config set rancher.docker.args "$DOCKER_ARGS"
+DOCKER_ARGS="[$(sudo ros config get rancher.docker.args | grep -v unix:/// | sed -e 's/^- //g' | sed -e 's/.$/&, /' | xargs echo -n) unix:///$USER_DOCKER]"
 
-system-docker rm weave
+system-docker ps -a | grep -i weaveworks/ | sed -e 's/^\([0-9a-f]*\).*$/\1/gi' | xargs system-docker rm -f
+rm $WEAVE_CONFIG
 ros s delete $WEAVE_SERVICE
+rm $WEAVE_SERVICE
+
 cat > $WEAVE_SERVICE <<WEAVESERVICE
-weave:
+weave-launcher:
   image: nhzio/ros-weave:latest
-  container_name: weave
+  container_name: weave-launcher
   privileged: true
   net: host
   stdin_open: true
@@ -29,6 +38,18 @@ weave:
     UDP_PORTS: $UDP_PORTS
     HEAD_NODE: $HEAD_NODE
     DOCKER_HOST: $DOCKER_HOST
+    USER_DOCKER: $USER_DOCKER
+    SYSTEM_DOCKER: $SYSTEM_DOCKER
+    SWARM_DOCKER: $SWARM_DOCKER
+    WEAVE_DOCKER: $WEAVE_DOCKER
+
+    WEAVEROUTER_NICKNAME: $WEAVEROUTER_NICKNAME
+    WEAVEROUTER_HEAD_NODE: $WEAVEROUTER_HEAD_NODE
+    WEAVEROUTER_PASSWORD: $WEAVEROUTER_PASSWORD
+
+    WEAVEPROXY_HOST: $WEAVEPROXY_HOST
+    WEAVEPROXY_PORT: $WEAVEPROXY_PORT
+
   volumes:
     - /var/run:/var/run
 WEAVESERVICE
@@ -40,17 +61,55 @@ ros s create
 
 cat > $WEAVE_CONFIG <<'WEAVECONFIG'
 write_files:
-- path: /opt/rancher/bin/start.sh
+- path: $WEAVE_SERVICE
   owner: root
-  permissions: "0755"
-  content: |
-    #!/bin/sh
-    sudo ln -sf /var/run/user-docker.sock /var/run/docker.sock
+  permissions: "0600"
+  content: |+
+    weave-launcher:
+      image: nhzio/ros-weave:latest
+      container_name: weave-launcher
+      privileged: true
+      net: host
+      stdin_open: true
+      tty: true
+      labels:
+        io.rancher.os.scope: system
+        io.rancher.os.after: docker,console
+      environment:
+        TCP_PORTS: $TCP_PORTS
+        UDP_PORTS: $UDP_PORTS
+        HEAD_NODE: $HEAD_NODE
+        DOCKER_HOST: $DOCKER_HOST
+        USER_DOCKER: $USER_DOCKER
+        SYSTEM_DOCKER: $SYSTEM_DOCKER
+        SWARM_DOCKER: $SWARM_DOCKER
+        WEAVE_DOCKER: $WEAVE_DOCKER
 
-- path: /usr/bin/weave
+        WEAVEROUTER_NICKNAME: $WEAVEROUTER_NICKNAME
+        WEAVEROUTER_HEAD_NODE: $WEAVEROUTER_HEAD_NODE
+        WEAVEROUTER_PASSWORD: $WEAVEROUTER_PASSWORD
+
+        WEAVEPROXY_HOST: $WEAVEPROXY_HOST
+        WEAVEPROXY_PORT: $WEAVEPROXY_PORT
+
+      volumes:
+        - /var/run:/var/run
+
+- path: /sbin/weave
   owner: root
   permissions: "0755"
-  content: |
+  content: |+
     #!/bin/bash
-    docker -H unix:///var/run/user-docker.sock run --rm -i -t -v /var/run:/var/run nhzio/ros-weave:latest weave "$@"
+    system-docker run --rm -i -t \
+                      -v /var/run:/var/run \
+                      --env=DOCKER_HOST=$SYSTEM_DOCKER \
+                      --env=SWARM_DOCKER=$SWARM_DOCKER \
+                      --env=WEAVE_DOCKER=$WEAVE_DOCKER \
+                      --env=SYSTEM_DOCKER=$SYSTEM_DOCKER \
+                      nhzio/ros-weave:latest weave "\$@"
+
+rancher:
+  services_include:
+    /var/lib/rancher/conf/weave-launcher.yml: true
+
 WEAVECONFIG
